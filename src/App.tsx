@@ -326,6 +326,7 @@ function ProductPage() {
       status: "Pending"
     };
 
+    
     await axios.post(`${API_URL}/api/orders`, orderData); 
     
     alert(`${product.name} ကို ဝယ်ယူပြီးပါပြီ။`);
