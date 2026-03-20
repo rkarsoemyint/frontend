@@ -4,8 +4,14 @@ import { LayoutDashboard, Package, ShoppingCart, Users, Settings, LogOut, Menu, 
 import { BrowserRouter as Router, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
 import { Lock, Mail, Eye, EyeOff } from 'lucide-react';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://backend-kl3x.onrender.com';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+axios.defaults.baseURL = API_BASE_URL;
+
+const token = localStorage.getItem('token');
+if (token) {
+  axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+}
 
 // --- Main App Component ---
 function App() {
@@ -255,38 +261,61 @@ function ProductPage() {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  
+  const authAxios = axios.create({
+    baseURL: API_URL,
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem('token')}`
+    }
+  });
 
   const fetchData = async () => {
-    setLoading(true);
-    const [pRes, cRes] = await Promise.all([
-      axios.get(`${API_URL}/api/products`),
-      axios.get(`${API_URL}/api/products/categories`)
-    ]);
-    setProducts(pRes.data);
-    setCategories(cRes.data);
-    setLoading(false);
+    try {
+      setLoading(true);
+      const [pRes, cRes] = await Promise.all([
+        axios.get(`${API_URL}/api/products`),
+        axios.get(`${API_URL}/api/products/categories`)
+      ]);
+      setProducts(pRes.data);
+      setCategories(cRes.data);
+    } catch (err) {
+      console.error("Fetch Error:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { fetchData(); }, []);
 
   const handleSave = async (formData: any) => {
-    if (editingProduct) await axios.put(`http://localhost:5000/api/products/${editingProduct._id}`, formData);
-    else await axios.post('http://localhost:5000/api/products', formData);
-    fetchData();
-    setIsModalOpen(false);
+    try {
+      if (editingProduct) {
+        await authAxios.put(`/api/products/${editingProduct._id}`, formData);
+      } else {
+        await authAxios.post('/api/products', formData);
+      }
+      fetchData();
+      setIsModalOpen(false);
+    } catch (err) {
+      alert("ဒေတာသိမ်းလို့ မရပါဘူးခင်ဗျာ။ (Login ပြန်ဝင်ကြည့်ပါ)");
+    }
   };
 
   const handleDelete = async (id: string) => {
     if (window.confirm("Delete this product?")) {
-      await axios.delete(`http://localhost:5000/api/products/${id}`);
-      fetchData();
+      try {
+        await authAxios.delete(`/api/products/${id}`);
+        fetchData();
+      } catch (err) {
+        alert("ဖျက်လို့ မရပါဘူးခင်ဗျာ။");
+      }
     }
   };
 
   const handleBuy = async (product: Product) => {
     try {
       const orderData = {
-        customerName: "Anonymous Customer", 
+        customerName: "Customer", 
         items: [{
           productId: product._id,
           name: product.name,
@@ -297,7 +326,7 @@ function ProductPage() {
         status: "Pending"
       };
 
-      await axios.post('http://localhost:5000/api/orders', orderData);
+      await authAxios.post('/api/orders', orderData);
       alert(`${product.name} ကို ဝယ်ယူပြီးပါပြီ။ Orders Page မှာ သွားကြည့်နိုင်ပါတယ်။`);
     } catch (error) {
       console.error("Order error:", error);
@@ -308,7 +337,9 @@ function ProductPage() {
   return (
     <div className="p-8">
       {loading ? (
-        <div className="flex justify-center p-20"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div></div>
+        <div className="flex justify-center p-20">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        </div>
       ) : (
         <ProductTable 
           products={products} 
@@ -329,138 +360,6 @@ function ProductPage() {
     </div>
   );
 }
-
-// --- Other Components ---
-
-function ProductTable({ products, onOpenModal, onEdit, onDelete, onBuy }: any) {
-  return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-      
-      <div className="p-6 border-b border-gray-100 flex justify-between items-center">
-        <h3 className="text-lg font-bold">Product List</h3>
-        <button 
-          onClick={onOpenModal} 
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition"
-        >
-          + Add Product
-        </button>
-      </div>
-
-      
-      <table className="w-full text-left">
-        <thead>
-          <tr className="bg-gray-50 text-gray-500 text-sm uppercase">
-            <th className="px-6 py-4">Name</th>
-            <th className="px-6 py-4">Category</th>
-            <th className="px-6 py-4">Price</th>
-            <th className="px-6 py-4">Stock</th>
-            <th className="px-6 py-4">Actions</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-100">
-          {products.map((p: Product) => (
-            <tr key={p._id} className="hover:bg-gray-50">
-              <td className="px-6 py-4 font-medium">{p.name}</td>
-              <td className="px-6 py-4 text-gray-500">{p.category}</td>
-              <td className="px-6 py-4 font-semibold">${p.price}</td>
-              <td className="px-6 py-4">{p.stock}</td>
-              <td className="px-6 py-4 flex gap-3 items-center">
-              
-                <button 
-                  onClick={() => onBuy(p)} 
-                  className="bg-green-100 text-green-600 px-3 py-1 rounded text-xs font-bold hover:bg-green-200 transition"
-                >
-                  Buy Now
-                </button>
-                
-                
-                <button 
-                  onClick={() => onEdit(p)} 
-                  className="text-blue-600 text-sm hover:underline"
-                >
-                  Edit
-                </button>
-                <button 
-                  onClick={() => onDelete(p._id)} 
-                  className="text-red-500 text-sm hover:underline"
-                >
-                  Delete
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-function ProductModal({ isOpen, onClose, onSave, initialData, categories, onRefreshCategories }: any) {
-  const [formData, setFormData] = useState({ name: '', category: '', price: 0, stock: 0 });
-  const [newCat, setNewCat] = useState('');
-
-  useEffect(() => {
-    if (initialData) setFormData(initialData);
-    else setFormData({ name: '', category: categories[0]?.name || '', price: 0, stock: 0 });
-  }, [initialData, isOpen, categories]);
-
-  if (!isOpen) return null;
-
-  const addCategory = async () => {
-    if (!newCat) return;
-    await axios.post(`${API_URL}/api/products/categories`, { name: newCat });
-    setNewCat('');
-    onRefreshCategories();
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-2xl p-8 w-full max-w-md shadow-2xl">
-        <h2 className="text-xl font-bold mb-4">{initialData ? 'Edit' : 'Add'} Product</h2>
-        <div className="mb-4 bg-gray-50 p-3 rounded-lg">
-           <div className="flex gap-2">
-             <input value={newCat} onChange={e => setNewCat(e.target.value)} placeholder="New Category" className="flex-1 p-1 text-sm border rounded" />
-             <button onClick={addCategory} className="bg-green-600 text-white px-2 rounded text-xs">Add</button>
-           </div>
-        </div>
-        <form onSubmit={(e) => { e.preventDefault(); onSave(formData); }} className="space-y-4">
-          <input value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="Product Name" className="w-full p-2 border rounded" required />
-          <select value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} className="w-full p-2 border rounded">
-            <option value="">Select Category</option>
-            {categories.map((c: any) => <option key={c._id} value={c.name}>{c.name}</option>)}
-          </select>
-          <input type="number" value={formData.price} onChange={e => setFormData({...formData, price: Number(e.target.value)})} placeholder="Price" className="w-full p-2 border rounded" />
-          <input type="number" value={formData.stock} onChange={e => setFormData({...formData, stock: Number(e.target.value)})} placeholder="Stock" className="w-full p-2 border rounded" />
-          <div className="flex gap-2">
-            <button type="button" onClick={onClose} className="flex-1 p-2 bg-gray-100 rounded">Cancel</button>
-            <button type="submit" className="flex-1 p-2 bg-blue-600 text-white rounded">Save</button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-function NavItem({ to, icon, label }: { to: string, icon: any, label: string }) {
-  const location = useLocation();
-  const active = location.pathname === to;
-  return (
-    <Link to={to} className={`flex items-center gap-3 px-6 py-3 transition ${active ? 'bg-blue-50 text-blue-600 border-r-4 border-blue-600' : 'text-gray-500 hover:bg-gray-50'}`}>
-      {icon} <span className="font-medium">{label}</span>
-    </Link>
-  );
-}
-
-function StatCard({ title, value, change, color }: any) {
-  return (
-    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-      <p className="text-sm text-gray-500 mb-1">{title}</p>
-      <h4 className="text-2xl font-bold">{value}</h4>
-      <span className={`text-xs ${color}`}>{change}</span>
-    </div>
-  );
-}
-
 // --- Orders Page ---
 function OrdersPage() {
   const [orders, setOrders] = useState<any[]>([]);
