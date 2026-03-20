@@ -313,26 +313,28 @@ function ProductPage() {
   };
 
   const handleBuy = async (product: Product) => {
-    try {
-      const orderData = {
-        customerName: "Customer", 
-        items: [{
-          productId: product._id,
-          name: product.name,
-          quantity: 1,
-          price: product.price
-        }],
-        totalAmount: product.price,
-        status: "Pending"
-      };
+  try {
+    const orderData = {
+      customerName: "Customer", 
+      items: [{
+        productId: product._id,
+        name: product.name,
+        quantity: 1,
+        price: product.price
+      }],
+      totalAmount: product.price,
+      status: "Pending"
+    };
 
-      await authAxios.post('/api/orders', orderData);
-      alert(`${product.name} ကို ဝယ်ယူပြီးပါပြီ။ Orders Page မှာ သွားကြည့်နိုင်ပါတယ်။`);
-    } catch (error) {
-      console.error("Order error:", error);
-      alert("အော်ဒါတင်လို့ မရပါဘူးခင်ဗျာ။");
-    }
-  };
+    await axios.post(`${API_URL}/api/orders`, orderData); 
+    
+    alert(`${product.name} ကို ဝယ်ယူပြီးပါပြီ။`);
+    fetchData();
+  } catch (error) {
+    console.error("Order error:", error);
+    alert("အော်ဒါတင်လို့ မရပါဘူးခင်ဗျာ။");
+  }
+};
 
   return (
     <div className="p-8">
