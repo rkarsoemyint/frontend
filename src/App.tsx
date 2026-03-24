@@ -270,20 +270,20 @@ function ProductPage() {
   });
 
   const fetchData = async () => {
-    try {
-      setLoading(true);
-      const [pRes, cRes] = await Promise.all([
-        axios.get(`${API_URL}/api/products`),
-        axios.get(`${API_URL}/api/products/categories`)
-      ]);
-      setProducts(pRes.data);
-      setCategories(cRes.data);
-    } catch (err) {
-      console.error("Fetch Error:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  try {
+    setLoading(true);
+    const [pRes, cRes] = await Promise.all([
+      axios.get(`${API_URL}/api/products`),
+      axios.get(`${API_URL}/api/products/categories`)
+    ]);
+    setProducts(pRes.data);
+    setCategories(cRes.data);
+  } catch (err) {
+    console.error("404 Error - Backend link ကို မတွေ့ပါဘူး");
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => { fetchData(); }, []);
 
