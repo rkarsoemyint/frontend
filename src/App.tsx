@@ -359,10 +359,23 @@ function LoginPage({ onLogin }: any) {
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [isSidebarOpen, setSidebarOpen] = useState(false);
+  const [siteName, setSiteName] = useState("MyStore Admin");
 
   useEffect(() => {
     const savedUser = localStorage.getItem('user');
     if (savedUser) setUser(JSON.parse(savedUser));
+
+    const fetchSettings = async () => {
+      try {
+        const res = await axios.get('/api/settings');
+        if (res.data && res.data.storeName) {
+          setSiteName(res.data.storeName);
+        }
+      } catch (err) {
+        console.log("Using default site name");
+      }
+    };
+    fetchSettings();
   }, []);
 
   if (!user) return <LoginPage onLogin={setUser} />;
@@ -372,7 +385,10 @@ export default function App() {
       <div className="flex min-h-screen bg-gray-50">
         {/* Sidebar */}
         <aside className="w-64 bg-white border-r hidden md:flex flex-col">
-          <div className="p-6 text-2xl font-bold text-blue-600 border-b">Admin Panel</div>
+          <div className="p-6 text-2xl font-bold text-blue-600 border-b truncate">
+            {siteName}
+          </div>
+          
           <nav className="flex-1 mt-4">
             <NavItem to="/" icon={<LayoutDashboard size={20} />} label="Dashboard" />
             <NavItem to="/products" icon={<Package size={20} />} label="Products" />
@@ -381,6 +397,12 @@ export default function App() {
             <NavItem to="/profile" icon={<Users size={20} />} label="Profile" />
             <NavItem to="/settings" icon={<Settings size={20} />} label="Settings" />
           </nav>
+
+          <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/50">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Developed By</p>
+            <p className="text-sm font-bold text-gray-700">Thant Zin Oo</p>
+          </div>
+
           <button onClick={() => { localStorage.clear(); window.location.reload(); }} className="p-6 text-red-500 font-bold flex items-center gap-2 border-t">
             <LogOut size={20} /> Logout
           </button>
@@ -389,12 +411,15 @@ export default function App() {
         {/* Main Content */}
         <main className="flex-1 flex flex-col min-w-0">
           <header className="h-16 bg-white border-b flex items-center justify-between px-8">
-            <span className="font-bold text-gray-400">STORE MANAGEMENT</span>
+            <span className="font-bold text-gray-400 uppercase tracking-tighter text-xs">Admin Control Panel</span>
             <div className="flex items-center gap-3">
-              <span className="text-sm font-medium">{user.name}</span>
-              <div className="w-9 h-9 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">{user.name.charAt(0)}</div>
+              <span className="text-sm font-medium text-gray-600">{user.name}</span>
+              <div className="w-9 h-9 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold shadow-sm">
+                {user.name.charAt(0).toUpperCase()}
+              </div>
             </div>
           </header>
+
           <div className="p-8 overflow-y-auto">
             <Routes>
               <Route path="/" element={<DashboardHome />} />
@@ -403,6 +428,7 @@ export default function App() {
               <Route path="/customers" element={<CustomersPage />} />
               <Route path="/profile" element={<ProfilePage user={user} />} />
               <Route path="/settings" element={<SettingsPage />} />
+              <Route path="*" element={<Navigate to="/" />} />
             </Routes>
           </div>
         </main>
