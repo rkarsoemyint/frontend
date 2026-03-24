@@ -986,6 +986,23 @@ function RegisterPage({ onSwitch }: { onSwitch: () => void }) {
   );
 }
 
+function NavItem({ to, icon, label }: { to: string, icon: any, label: string }) {
+  const location = useLocation();
+  const active = location.pathname === to;
+  return (
+    <Link 
+      to={to} 
+      className={`flex items-center gap-3 px-6 py-3 transition ${
+        active 
+          ? 'bg-blue-50 text-blue-600 border-r-4 border-blue-600' 
+          : 'text-gray-500 hover:bg-gray-50'
+      }`}
+    >
+      {icon} <span className="font-medium">{label}</span>
+    </Link>
+  );
+}
+
 // -----------------------------
 // 2. LOGIN PAGE COMPONENT
 // -----------------------------
