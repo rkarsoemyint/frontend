@@ -1,7 +1,7 @@
 {
   "rewrites": [
     {
-      "source": "/(api|auth|products|orders|settings)/:path*",
+      "source": "/api/:path*",
       "destination": "https://backend-kl3x.onrender.com/api/:path*"
     },
     {
