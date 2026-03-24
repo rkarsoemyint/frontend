@@ -225,7 +225,110 @@ function ProfilePage({ user }: any) {
 }
 
 function SettingsPage() {
-  return <div className="p-8">Settings and Store customization coming soon...</div>;
+  const [storeName, setStoreName] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
+
+  // လက်ရှိ ဆိုင်နာမည်ကို Backend ကနေ အရင်ဆွဲထုတ်မယ်
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await axios.get('/api/settings');
+        if (res.data && res.data.storeName) {
+          setStoreName(res.data.storeName);
+        }
+      } catch (err) {
+        console.log("Settings fetching error - using default");
+        setStoreName("MyStore Admin");
+      }
+    };
+    fetchSettings();
+  }, []);
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setMessage("");
+
+    try {
+      // Backend ကို သိမ်းခိုင်းမယ်
+      await axios.post('/api/settings', { storeName });
+      setMessage("Settings updated successfully! ✅");
+      
+      // Sidebar က နာမည်ပါချက်ချင်းပြောင်းအောင် Page ကို Refresh လုပ်ပေးမယ်
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    } catch (err) {
+      setMessage("Error updating settings. ❌");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="max-w-2xl mx-auto">
+      <div className="flex items-center gap-3 mb-8">
+        <Settings className="text-blue-600" size={28} />
+        <h1 className="text-2xl font-bold text-gray-800">System Settings</h1>
+      </div>
+
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="p-8">
+          <form onSubmit={handleSave} className="space-y-6">
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wider">
+                Store Display Name
+              </label>
+              <input 
+                type="text"
+                className="w-full p-4 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition-all text-lg"
+                placeholder="Enter your store name..."
+                value={storeName}
+                onChange={(e) => setStoreName(e.target.value)}
+                required
+              />
+              <p className="mt-2 text-sm text-gray-400">
+                Sidebar နဲ့ Dashboard မှာ ပေါ်မယ့် ဆိုင်နာမည် ဖြစ်ပါတယ်။
+              </p>
+            </div>
+
+            {message && (
+              <div className={`p-4 rounded-lg font-medium text-sm ${message.includes('successfully') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                {message}
+              </div>
+            )}
+
+            <div className="pt-4">
+              <button 
+                type="submit"
+                disabled={loading}
+                className={`w-full py-4 rounded-xl font-bold text-white transition-all shadow-lg ${
+                  loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 shadow-blue-200'
+                }`}
+              >
+                {loading ? "Saving Changes..." : "Save All Changes"}
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <div className="bg-gray-50 p-6 border-t border-gray-100">
+          <h4 className="text-xs font-bold text-gray-400 uppercase mb-4 tracking-widest">System Info</h4>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-white p-3 rounded-lg border border-gray-200">
+              <p className="text-[10px] text-gray-400 font-bold uppercase">Version</p>
+              <p className="text-sm font-bold text-gray-700">v1.0.0 Stable</p>
+            </div>
+            <div className="bg-white p-3 rounded-lg border border-gray-200">
+              <p className="text-[10px] text-gray-400 font-bold uppercase">Environment</p>
+              <p className="text-sm font-bold text-green-600">Production</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function LoginPage({ onLogin }: any) {
