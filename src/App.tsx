@@ -1003,6 +1003,15 @@ function NavItem({ to, icon, label }: { to: string, icon: any, label: string }) 
   );
 }
 
+function StatCard({ title, value, change, color }: any) {
+  return (
+    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+      <p className="text-sm text-gray-500 mb-1">{title}</p>
+      <h4 className="text-2xl font-bold">{value}</h4>
+      <span className={`text-xs ${color}`}>{change}</span>
+    </div>
+  );
+}
 // -----------------------------
 // 2. LOGIN PAGE COMPONENT
 // -----------------------------
