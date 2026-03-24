@@ -4,7 +4,7 @@ import { LayoutDashboard, Package, ShoppingCart, Users, Settings, LogOut, Menu, 
 import { BrowserRouter as Router, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
 import { Lock, Mail, Eye, EyeOff } from 'lucide-react';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://backend-kl3x.onrender.com';
+const API_URL = import.meta.env.VITE_API_URL || window.location.origin;
 
 axios.defaults.baseURL = API_BASE_URL;
 
