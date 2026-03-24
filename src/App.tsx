@@ -12,6 +12,215 @@ const token = localStorage.getItem('token');
 if (token) {
   axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 }
+// --- ၁။ လိုအပ်သော Sub-Components များ (Reference Error မတက်အောင် အပေါ်မှာထားပါ) ---
+
+function NavItem({ to, icon, label }: { to: string, icon: any, label: string }) {
+  const location = useLocation();
+  const active = location.pathname === to;
+  return (
+    <Link 
+      to={to} 
+      className={`flex items-center gap-3 px-6 py-3 transition ${
+        active ? 'bg-blue-50 text-blue-600 border-r-4 border-blue-600' : 'text-gray-500 hover:bg-gray-50'
+      }`}
+    >
+      {icon} <span className="font-medium">{label}</span>
+    </Link>
+  );
+}
+
+function StatCard({ title, value, change, color }: any) {
+  return (
+    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+      <p className="text-sm text-gray-500 mb-1">{title}</p>
+      <h4 className="text-2xl font-bold">{value}</h4>
+      <span className={`text-xs ${color}`}>{change}</span>
+    </div>
+  );
+}
+
+// --- ၂။ Main ProductPage Function ---
+
+function ProductPage() {
+  const [products, setProducts] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<any | null>(null);
+
+  // Auth လိုအပ်တဲ့ request တွေအတွက် (Add, Edit, Delete)
+  const authAxios = axios.create({
+    baseURL: API_BASE_URL,
+    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+  });
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      // axios.defaults.baseURL သတ်မှတ်ထားရင် လမ်းကြောင်းတိုလေးပဲ သုံးလို့ရပါပြီ
+      const [pRes, cRes] = await Promise.all([
+        axios.get('/api/products'),
+        axios.get('/api/products/categories')
+      ]);
+      setProducts(pRes.data || []);
+      setCategories(cRes.data || []);
+    } catch (err) {
+      console.error("Fetch Data Error:", err);
+      setProducts([]); // Error တက်ရင် App ကြီး Crash မဖြစ်အောင် array အလွတ်ထားမယ်
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchData(); }, []);
+
+  const handleSave = async (formData: any) => {
+    try {
+      if (editingProduct) {
+        await authAxios.put(`/api/products/${editingProduct._id}`, formData);
+      } else {
+        await authAxios.post('/api/products', formData);
+      }
+      fetchData();
+      setIsModalOpen(false);
+    } catch (err) {
+      alert("ဒေတာသိမ်းလို့ မရပါဘူးခင်ဗျာ။ Login ပြန်ဝင်ကြည့်ပါ သို့မဟုတ် ဒေတာအချက်အလက် ပြန်စစ်ပါ။");
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (window.confirm("ဒီပစ္စည်းကို ဖျက်မှာ သေချာပါသလား?")) {
+      try {
+        await authAxios.delete(`/api/products/${id}`);
+        fetchData();
+      } catch (err) {
+        alert("ဖျက်လို့ မရပါဘူးခင်ဗျာ။");
+      }
+    }
+  };
+
+  const handleBuy = async (product: any) => {
+    try {
+      const orderData = {
+        customerName: "Admin Quick Buy",
+        items: [{
+          productId: product._id,
+          name: product.name,
+          quantity: 1,
+          price: product.price
+        }],
+        totalAmount: product.price,
+        status: "Pending"
+      };
+      await axios.post('/api/orders', orderData);
+      alert(`${product.name} အတွက် အော်ဒါတင်ပြီးပါပြီ။`);
+      fetchData();
+    } catch (error) {
+      alert("အော်ဒါတင်လို့ မရပါဘူးခင်ဗျာ။");
+    }
+  };
+
+  return (
+    <div className="p-8">
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-2xl font-bold text-gray-800">Products Management</h1>
+        <button 
+          onClick={() => { setEditingProduct(null); setIsModalOpen(true); }}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+        >
+          + Add New Product
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center p-20">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        </div>
+      ) : (
+        /* Products Table အပိုင်းကို ဒီမှာတင်ရေးလိုက်ပါတယ် (အဖြူရောင်မဖြစ်အောင်) */
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <table className="w-full text-left">
+            <thead className="bg-gray-50 border-b border-gray-100">
+              <tr>
+                <th className="px-6 py-4 text-sm font-semibold text-gray-600">Product</th>
+                <th className="px-6 py-4 text-sm font-semibold text-gray-600">Price</th>
+                <th className="px-6 py-4 text-sm font-semibold text-gray-600">Category</th>
+                <th className="px-6 py-4 text-sm font-semibold text-gray-600 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {products.length > 0 ? products.map((product) => (
+                <tr key={product._id} className="hover:bg-gray-50/50 transition">
+                  <td className="px-6 py-4 font-medium text-gray-800">{product.name}</td>
+                  <td className="px-6 py-4 text-gray-600">{product.price.toLocaleString()} MMK</td>
+                  <td className="px-6 py-4 text-sm text-gray-500">{product.category || 'N/A'}</td>
+                  <td className="px-6 py-4 text-right space-x-2">
+                    <button onClick={() => handleBuy(product)} className="text-green-600 hover:underline text-sm font-medium">Buy</button>
+                    <button onClick={() => { setEditingProduct(product); setIsModalOpen(true); }} className="text-blue-600 hover:underline text-sm font-medium">Edit</button>
+                    <button onClick={() => handleDelete(product._id)} className="text-red-600 hover:underline text-sm font-medium">Delete</button>
+                  </td>
+                </tr>
+              )) : (
+                <tr><td colSpan={4} className="px-6 py-10 text-center text-gray-400">ပစ္စည်းများ မရှိသေးပါ...</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+      
+      {/* ProductModal ကိုလည်း အောက်မှာ Component သီးသန့်ရေးပေးထားပါတယ် */}
+      {isModalOpen && (
+        <ProductFormModal 
+          onClose={() => setIsModalOpen(false)} 
+          onSave={handleSave} 
+          initialData={editingProduct} 
+          categories={categories}
+        />
+      )}
+    </div>
+  );
+}
+
+// --- ၃။ ProductFormModal (Modal အဟောင်းနေရာမှာ အစားထိုးရန်) ---
+
+function ProductFormModal({ onClose, onSave, initialData, categories }: any) {
+  const [formData, setFormData] = useState(initialData || { name: '', price: 0, category: '', description: '' });
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-2xl p-8 w-full max-w-md">
+        <h2 className="text-xl font-bold mb-6">{initialData ? 'Edit Product' : 'Add New Product'}</h2>
+        <div className="space-y-4">
+          <input 
+            className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Product Name"
+            value={formData.name}
+            onChange={(e) => setFormData({...formData, name: e.target.value})}
+          />
+          <input 
+            type="number"
+            className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Price"
+            value={formData.price}
+            onChange={(e) => setFormData({...formData, price: Number(e.target.value)})}
+          />
+          <select 
+            className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+            value={formData.category}
+            onChange={(e) => setFormData({...formData, category: e.target.value})}
+          >
+            <option value="">Select Category</option>
+            {categories.map((c: any) => <option key={c._id} value={c.name}>{c.name}</option>)}
+          </select>
+        </div>
+        <div className="flex gap-3 mt-8">
+          <button onClick={onClose} className="flex-1 py-3 border rounded-xl hover:bg-gray-50">Cancel</button>
+          <button onClick={() => onSave(formData)} className="flex-1 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700">Save</button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // --- Main App Component ---
 function App() {
@@ -255,114 +464,7 @@ function DashboardHome() {
 // --- Product Page ---- //
 
 // --- Product Page Component ---
-function ProductPage() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<{ _id: string, name: string }[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  
-  const authAxios = axios.create({
-    baseURL: API_URL,
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem('token')}`
-    }
-  });
 
-  const fetchData = async () => {
-  try {
-    setLoading(true);
-    const [pRes, cRes] = await Promise.all([
-      axios.get(`${API_URL}/api/products`),
-      axios.get(`${API_URL}/api/products/categories`)
-    ]);
-    setProducts(pRes.data);
-    setCategories(cRes.data);
-  } catch (err) {
-    console.error("404 Error - Backend link ကို မတွေ့ပါဘူး");
-  } finally {
-    setLoading(false);
-  }
-};
-
-  useEffect(() => { fetchData(); }, []);
-
-  const handleSave = async (formData: any) => {
-    try {
-      if (editingProduct) {
-        await authAxios.put(`/api/products/${editingProduct._id}`, formData);
-      } else {
-        await authAxios.post('/api/products', formData);
-      }
-      fetchData();
-      setIsModalOpen(false);
-    } catch (err) {
-      alert("ဒေတာသိမ်းလို့ မရပါဘူးခင်ဗျာ။ (Login ပြန်ဝင်ကြည့်ပါ)");
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    if (window.confirm("Delete this product?")) {
-      try {
-        await authAxios.delete(`/api/products/${id}`);
-        fetchData();
-      } catch (err) {
-        alert("ဖျက်လို့ မရပါဘူးခင်ဗျာ။");
-      }
-    }
-  };
-
-  const handleBuy = async (product: Product) => {
-  try {
-    const orderData = {
-      customerName: "Customer", 
-      items: [{
-        productId: product._id,
-        name: product.name,
-        quantity: 1,
-        price: product.price
-      }],
-      totalAmount: product.price,
-      status: "Pending"
-    };
-
-    
-    await axios.post(`${API_URL}/api/orders`, orderData); 
-    
-    alert(`${product.name} ကို ဝယ်ယူပြီးပါပြီ။`);
-    fetchData();
-  } catch (error) {
-    console.error("Order error:", error);
-    alert("အော်ဒါတင်လို့ မရပါဘူးခင်ဗျာ။");
-  }
-};
-
-  return (
-    <div className="p-8">
-      {loading ? (
-        <div className="flex justify-center p-20">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-        </div>
-      ) : (
-        <ProductTable 
-          products={products} 
-          onOpenModal={() => { setEditingProduct(null); setIsModalOpen(true); }} 
-          onEdit={(p: Product) => { setEditingProduct(p); setIsModalOpen(true); }} 
-          onDelete={handleDelete} 
-          onBuy={handleBuy}
-        />
-      )}
-      <ProductModal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
-        onSave={handleSave} 
-        initialData={editingProduct}
-        categories={categories}
-        onRefreshCategories={() => fetchData()}
-      />
-    </div>
-  );
-}
 // --- Orders Page ---
 function OrdersPage() {
   const [orders, setOrders] = useState<any[]>([]);
